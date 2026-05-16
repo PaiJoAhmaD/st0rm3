@@ -1,4 +1,4 @@
-stOrm3 Bot - Python 3 Edition
+stOrm-py3 Bot - Python 3 Edition
 
 
 https://img.shields.io/badge/Python-3.8%252B-blue.svg
