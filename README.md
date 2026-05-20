@@ -7,22 +7,6 @@ https://img.shields.io/badge/XMPP-slixmpp-green.svg
 
 stOrm adalah bot XMPP multiguna yang awalnya dibuat dalam Python 2 menggunakan pustaka xmpppy. Proyek ini adalah porting penuh ke Python 3 dengan pustaka modern slixmpp.
 
-Bot mampu:
-
-Berada di banyak room MUC sekaligus.
-
-Menjalankan perintah langsung tanpa prefix (cukup ketik help, ping, access, dll).
-
-Manajemen akses bertingkat (global dan per-room, level -100 hingga 100).
-
-Remote command (remote) untuk menjalankan perintah di room lain.
-
-Redirect hasil perintah ke pengguna privat (redirect).
-
-Superadmin massal (fullban, fullunban, fullmember, fullunmember) di semua room.
-
-Dan banyak lagi.
-
 🚀 Fitur Utama
 Tanpa prefix: command diketik langsung (tanpa !).
 
@@ -45,13 +29,15 @@ Python 3.8 atau lebih baru
 
 pip terbaru
 
+Library XMPP: slixmpp.
+
 Koneksi ke server XMPP (akun bot)
 
 🔧 Instalasi Cepat
 bash
 # 1. Clone repositori atau salin folder proyek
 git clone <url-repo> storm-py3
-cd storm-py3
+cd storm3
 
 # 2. Install pustaka yang diperlukan
 python3 -m pip install --upgrade pip
@@ -63,7 +49,7 @@ nano config.json                     # isi dengan kredensial bot Anda
 
 # 4. (Opsional) Siapkan daftar room
 mkdir dynamic
-echo '{"room@conference.example.com": {"nick": "stOrm", "passw": ""}}' > dynamic/chatrooms.list
+echo '{"room@conference.example.com": {"nick": "stOrm3", "passw": ""}}' > dynamic/chatrooms.list
 
 # 5. Jalankan bot
 python3 bot.py
@@ -87,4 +73,4 @@ Original Bot: Mike Mintz, Als, dimichxp, Boris Kotov.
 
 Python 3 Port: Komunitas & kontributor modern.
 
-Library XMPP: slixmpp.
+
