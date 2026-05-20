@@ -1,0 +1,13 @@
+{
+    "CONNECT_SERVER": "xmpp.server",
+    "PORT": 5222,
+    "JID": "bot@xmpp.server",
+    "PASSWORD": "paswword.bot",
+    "RESOURCE": "bot",
+    "DEFAULT_NICK": "stOrm3",
+    "ADMINS": ["admin@xmpp.server"],
+    "ADMIN_PASSWORD": "password_admin_anda?",
+    "AUTO_RESTART": true,
+    "PUBLIC_LOG_DIR": "logs/public",
+    "PRIVATE_LOG_DIR": "logs/private"
+  }
