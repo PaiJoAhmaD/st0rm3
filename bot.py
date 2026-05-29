@@ -26,10 +26,21 @@ register_stanza_plugin(Iq, Ping)
 def load_config(path=None):
     if path is None:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Configuration file not found: {path}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in config file: {e}")
+        sys.exit(1)
 
-CFG = load_config()
+try:
+    CFG = load_config()
+except Exception as e:
+    logging.error(f"Failed to load config: {e}")
+    sys.exit(1)
 
 CONNECT_SERVER = CFG["CONNECT_SERVER"]
 PORT = CFG["PORT"]
@@ -146,7 +157,8 @@ class StormBot(ClientXMPP):
         try:
             with open(GROUPCHAT_CACHE_FILE, "r", encoding="utf-8") as f:
                 rooms = json.load(f)
-        except:
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.warning(f"Could not load chatrooms cache: {e}")
             return
 
         for room, cfg in rooms.items():
@@ -305,8 +317,8 @@ class StormBot(ClientXMPP):
                     rooms = json.load(f)
                 if room in rooms and rooms[room].get('nick'):
                     return rooms[room]['nick']
-            except:
-                pass
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                logging.warning(f"Could not read bot nick from cache: {e}")
         return self.default_nick
 
     def user_level(self, jid, room=None):
@@ -366,8 +378,12 @@ class StormBot(ClientXMPP):
         if not os.path.exists(path):
             with open(path, 'w', encoding='utf-8') as f:
                 json.dump({"popups": 1, "autoaway": 0, "status": {"status": "", "show": ""}}, f)
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.warning(f"Error reading room config: {e}")
+            return {"popups": 1, "autoaway": 0, "status": {"status": "", "show": ""}}
 
     def save_gch_config(self, room, cfg):
         path = f'dynamic/{room}/config.cfg'
@@ -390,6 +406,7 @@ class StormBot(ClientXMPP):
     def load_plugins(self):
         plugin_path = Path(PLUGIN_DIR)
         if not plugin_path.exists():
+            logging.info(f"Plugin directory not found: {PLUGIN_DIR}")
             return
         for file in plugin_path.iterdir():
             if file.suffix == ".py" and file.name != "__init__.py":
@@ -408,36 +425,71 @@ class StormBot(ClientXMPP):
 # =============================================================================
 async def run_bot(bot):
     # connect() di slixmpp modern adalah sync, tidak perlu await
-    bot.connect()
+    try:
+        bot.connect((CONNECT_SERVER, PORT))
+    except Exception as e:
+        logging.error(f"Connection failed: {e}")
+        return False
 
     # Tunggu sampai sesi benar-benar dimulai
     session_started = asyncio.Event()
     bot.add_event_handler("session_start", lambda e: session_started.set())
-    await asyncio.wait_for(session_started.wait(), timeout=30)  # 30 detik timeout
+    try:
+        await asyncio.wait_for(session_started.wait(), timeout=30)  # 30 detik timeout
+    except asyncio.TimeoutError:
+        logging.error("Session start timeout")
+        bot.disconnect()
+        return False
 
     # Tunggu sampai disconnect
     disconnect_event = asyncio.Event()
     bot.add_event_handler("disconnected", lambda e: disconnect_event.set())
     await disconnect_event.wait()
+    return True
 
 
 # =============================================================================
 # Main
 # =============================================================================
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s"
+    )
+
+    logging.info("Starting stOrm3 bot...")
+
+    retry_count = 0
+    max_retries = 5
 
     while True:
-        bot = StormBot(JID, PASSWORD)
-        bot.load_plugins()
         try:
-            asyncio.run(run_bot(bot))
+            bot = StormBot(JID, PASSWORD)
+            bot.load_plugins()
+            logging.info(f"Connecting to {CONNECT_SERVER}:{PORT} as {JID}")
+            
+            success = asyncio.run(run_bot(bot))
+            
+            if success:
+                retry_count = 0
+            else:
+                retry_count += 1
+                
         except KeyboardInterrupt:
-            logging.info("Interrupted, exiting.")
+            logging.info("Interrupted by user, exiting.")
             break
-        except Exception:
-            logging.exception("Bot crashed")
+        except Exception as e:
+            logging.exception(f"Bot crashed: {e}")
+            retry_count += 1
+
         if not AUTO_RESTART:
             break
-        logging.info("Restarting bot in 5 seconds...")
+
+        if retry_count >= max_retries:
+            logging.error(f"Max retries ({max_retries}) reached, exiting.")
+            break
+
+        logging.info(f"Restarting bot in 5 seconds... (attempt {retry_count})")
         time.sleep(5)
+
+    logging.info("Bot shutdown complete.")
